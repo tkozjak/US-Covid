@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+    <title>USA COVID-19</title>
+
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Lato" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+        integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+        crossorigin="" />
+
+    <style>
+        * {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        html,
+        body {
+            height: 100vh;
+            width: 100vh;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        div.wrapper {
+            height: 100%;
+            width: 100%;
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="main_div_container" class="wrapper">
+        <!-- RENDERING ELEMENT -->
+        <canvas id="renderCanvas"></canvas>
+    </div>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/topojson.v2.min.js"></script>
+    <script src="js/three.min.js"></script> <!--  THREE JS library -->
+    <script src="js/OrbitControls.js"></script> <!-- ORBIT CONTROLS library -->
+    <!-- <script src="js/d3.min.js"></script> D3 library -->
+
+    <script>
+        // replace console outputs w empty function
+        //console.log = function () { };
+
+        //WINDOW, CANVAS and RENDERER
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+
+        window.addEventListener('resize', onWindowResize, false);
+
+        // 3D scene
+        var scene = new THREE.Scene();
+
+        // var camera = new THREE.OrthographicCamera(-w / 2, w / 2, h / 2, -h / 2, 0.0001, 20000);
+        // CAMERA
+        var aspect = w / h;
+        var camera = new THREE.PerspectiveCamera(65, aspect, 1, 2000);
+        //camera.filmOffset = -20.0;
+        //camera.setViewOffset(w, h, w * 0.0, h * 0.0, w, h);
+        camera.updateProjectionMatrix();
+        camera.position.x = -5;
+        camera.position.z = -20;
+        camera.position.y = 10;
+
+        // RENDERER
+        var renderer = new THREE.WebGLRenderer({ antialias: true, canvas: renderCanvas });
+        renderer.context.enable(renderer.context.DEPTH_TEST);
+        renderer.setSize(w, h);
+        renderer.sortObjects = false;
+        renderer.gammaFactor = 2.2;
+        renderer.gammaOutput = true;
+
+
+        // camera controls
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableRotate = true;
+        //controls.enablePan = false;
+        controls.addEventListener('change', render);
+        controls.enableKeys = true;
+        controls.keys = {
+            LEFT: 37,     //left arrow
+            UP: 38,       // up arrow
+            RIGHT: 39,    // right arrow
+            BOTTOM: 40    // down arrow
+        }
+        //controls.screenSpacePanning = true;
+
+        //***************************************************************************************
+        //
+        // SCENE OBJECTS
+        //
+        //***************************************************************************************
+
+        // HELPER POLAR GRID
+        var helper = new THREE.PolarGridHelper(50, 8, 8, 128);
+        helper.material.opacity = 0.2;
+        helper.material.transparent = true;
+        scene.add(helper);
+
+        var material = new THREE.LineBasicMaterial({
+            color: 0x0000ff
+        });
+        var p_material = new THREE.PointsMaterial({ color: 0x888888 });
+
+        var points = [];
+        /*
+        points.push(new THREE.Vector3(- 10, 0, 0));
+        points.push(new THREE.Vector3(0, 10, 0));
+        points.push(new THREE.Vector3(10, 0, 0));
+*/
+        var geometry;
+        var line;
+
+
+        d3.json("https://d3js.org/us-10m.v1.json", function (error, us) {
+            if (error) throw error;
+
+            let num_counties = us.objects.counties.geometries.length;
+
+            console.log("Number of counties:  " + num_counties);
+
+            us.objects.counties.geometries.forEach((d, i) => {
+                if (d["type"] == "Polygon") {
+                    let point_indices = d["arcs"][0];
+                    point_indices.forEach((point_index, i) => {
+
+                        let arc = us.arcs[Math.abs(Number((point_index)))];
+                        let x = 0;
+                        let y = 0;
+                        arc.forEach((arc_point, i) => {
+                            (x += arc_point[0]) * us.transform.scale[0] + us.transform.translate[0];
+                            (y += arc_point[1]) * us.transform.scale[1] + us.transform.translate[1];
+                            points.push(new THREE.Vector3(x/-1000, y/-1000, 0));
+                        });
+                        //console.log(point_index);
+                    });
+                }
+            });
+
+            console.log(points);
+
+            geometry = new THREE.BufferGeometry().setFromPoints(points);
+            line = new THREE.Points(geometry, p_material);
+            scene.add(line);
+        })
+
+
+        // RENDER / UPDATE FUNCTION
+        var render = function () {
+
+            requestAnimationFrame(render);
+
+            renderer.render(scene, camera);
+        };
+
+        // recalculate projection when windows resized
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // CALL RENDER
+        render();
+
+    </script>
+</body>
+
+</html>
