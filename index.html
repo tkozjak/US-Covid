@@ -120,7 +120,7 @@
         var shape_material = new THREE.LineBasicMaterial({ color: 0xffffff });
 
 
-        d3.json("https://d3js.org/us-10m.v1.json", function (error, us) {
+        d3.json("https://raw.githubusercontent.com/tkozjak/US-Covid/master/geo/counties-10m.json?token=AFS54F2C52PBYIPWP6FFYHC6QDKUO", function (error, us) {
             if (error) throw error;
 
             let num_counties = us.objects.counties.geometries.length;
@@ -132,7 +132,7 @@
 
 
 
-                if (i == 129) {
+                if (i > -1) {
                     // for now: generate only 'polygons' geometry type
                     if (d["type"] == "Polygon") {
 
@@ -147,7 +147,7 @@
 
                         // iterate over each memeber of arc indices array
                         arc_inidices_array.forEach((arc_index, i) => {
-                            if (i < 4) {
+                            if (i > -1) {
                                 let arc;
 
                                 if (arc_index < 0) {
@@ -168,27 +168,18 @@
                                 // iterate over each point and transform it to a coordinate
                                 arc.forEach((arc_point, i) => {
 
-                                    let current_start_point;
-                                    if (i == 0) {
-                                        current_start_point = [arc_point[0], arc_point[1]];
-                                    }
-                                    if (current_start_point != start_point) {
 
-                                        if (i == 0) {
-                                            start_point = [arc_point[0], arc_point[1]];
-                                        }
+                                    (x += arc_point[0]) * us.transform.scale[0] + us.transform.translate[0];
+                                    (y += arc_point[1]) * us.transform.scale[1] + us.transform.translate[1];
+                                    let x_coord = x;
+                                    let y_coord = y;
+                                    points.push(new THREE.Vector3(x / -1000, y / -1000, 0));
 
-                                        (x += arc_point[0]) * us.transform.scale[0] + us.transform.translate[0];
-                                        (y += arc_point[1]) * us.transform.scale[1] + us.transform.translate[1];
-                                        let x_coord = x;
-                                        let y_coord = y;
-                                        points.push(new THREE.Vector3(x / -1000, y / -1000, 0));
+                                    if (i < 1)
+                                        county_shape.moveTo((x_coord / -1000) + 50, (y_coord / -1000) + 50, 0);
+                                    else
+                                        county_shape.lineTo((x_coord / -1000) + 50, (y_coord / -1000) + 50, 0);
 
-                                        if (i < 1)
-                                            county_shape.moveTo((x_coord / -1000) + 50, (y_coord / -1000) + 50, 0);
-                                        else
-                                            county_shape.lineTo((x_coord / -1000) + 50, (y_coord / -1000) + 50, 0);
-                                    }
                                 });
                             }
                             //console.log(point_index);
