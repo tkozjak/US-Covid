@@ -116,6 +116,8 @@
 */
         var geometry;
         var line;
+        var county_shape_objects = [];
+        var shape_material = new THREE.LineBasicMaterial({ color: 0xffffff });
 
 
         d3.json("https://d3js.org/us-10m.v1.json", function (error, us) {
@@ -125,29 +127,88 @@
 
             console.log("Number of counties:  " + num_counties);
 
+            // iterate over each couty geometry
             us.objects.counties.geometries.forEach((d, i) => {
-                if (d["type"] == "Polygon") {
-                    let point_indices = d["arcs"][0];
-                    point_indices.forEach((point_index, i) => {
 
-                        let arc = us.arcs[Math.abs(Number((point_index)))];
-                        let x = 0;
-                        let y = 0;
-                        arc.forEach((arc_point, i) => {
-                            (x += arc_point[0]) * us.transform.scale[0] + us.transform.translate[0];
-                            (y += arc_point[1]) * us.transform.scale[1] + us.transform.translate[1];
-                            points.push(new THREE.Vector3(x/-1000, y/-1000, 0));
+
+
+                if (i == 129) {
+                    // for now: generate only 'polygons' geometry type
+                    if (d["type"] == "Polygon") {
+
+                        console.log(d["id"]);
+
+                        let county_shape = new THREE.Path();
+
+                        // get only first array of arc indices - one that represents a polygon
+                        let arc_inidices_array = d["arcs"][0];
+
+                        let start_point;
+
+                        // iterate over each memeber of arc indices array
+                        arc_inidices_array.forEach((arc_index, i) => {
+                            if (i < 4) {
+                                let arc;
+
+                                if (arc_index < 0) {
+                                    arc = us.arcs[(~arc_index)];
+                                }
+                                else
+                                    arc = us.arcs[arc_index];
+
+                                // get an array of arc points
+
+                                console.log(arc);
+                                let x = 0;
+                                let y = 0;
+
+                                //let x_coord = 0;
+                                //let y_coord = 0;
+
+                                // iterate over each point and transform it to a coordinate
+                                arc.forEach((arc_point, i) => {
+
+                                    let current_start_point;
+                                    if (i == 0) {
+                                        current_start_point = [arc_point[0], arc_point[1]];
+                                    }
+                                    if (current_start_point != start_point) {
+
+                                        if (i == 0) {
+                                            start_point = [arc_point[0], arc_point[1]];
+                                        }
+
+                                        (x += arc_point[0]) * us.transform.scale[0] + us.transform.translate[0];
+                                        (y += arc_point[1]) * us.transform.scale[1] + us.transform.translate[1];
+                                        let x_coord = x;
+                                        let y_coord = y;
+                                        points.push(new THREE.Vector3(x / -1000, y / -1000, 0));
+
+                                        if (i < 1)
+                                            county_shape.moveTo((x_coord / -1000) + 50, (y_coord / -1000) + 50, 0);
+                                        else
+                                            county_shape.lineTo((x_coord / -1000) + 50, (y_coord / -1000) + 50, 0);
+                                    }
+                                });
+                            }
+                            //console.log(point_index);
                         });
-                        //console.log(point_index);
-                    });
+
+                        let county_shape_geo = new THREE.BufferGeometry().setFromPoints(county_shape.getPoints());
+                        let county_object = new THREE.Line(county_shape_geo, shape_material);
+                        county_shape_objects.push(county_object);
+                        scene.add(county_object);
+                    }
                 }
+
+
             });
 
-            console.log(points);
+            //console.log(points);
 
-            geometry = new THREE.BufferGeometry().setFromPoints(points);
-            line = new THREE.Points(geometry, p_material);
-            scene.add(line);
+            //geometry = new THREE.BufferGeometry().setFromPoints(points);
+            //line = new THREE.Points(geometry, p_material);
+            //scene.add(line);
         })
 
 
