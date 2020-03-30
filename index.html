@@ -117,22 +117,72 @@
         var geometry;
         var line;
         var county_shape_objects = [];
-        var shape_material = new THREE.LineBasicMaterial({ color: 0xffffff });
+        
 
 
-        d3.json("https://raw.githubusercontent.com/tkozjak/US-Covid/master/geo/counties-10m.json?token=AFS54F2C52PBYIPWP6FFYHC6QDKUO", function (error, us) {
+        d3.json("https://raw.githubusercontent.com/tkozjak/US-Covid/master/geo/us-10m.v1.json", function (error, us) {
             if (error) throw error;
 
             let num_counties = us.objects.counties.geometries.length;
 
             console.log("Number of counties:  " + num_counties);
 
+            //var geojson = topojson.feature(us, us.objects.counties.geometries[0]);
+            //console.log("geojson", geojson)
+            /*
+                        var borders = topojson.mesh(us, us.objects.counties.geometries[0])
+                        console.log("borders", borders.coordinates[0])
+            
+                        let points = [];
+                        borders.coordinates[0].forEach((coord, i) => {
+                            console.log(coord);
+                            points.push(new THREE.Vector3(coord[0] / 50, coord[1] / 50, 0));
+                        });
+            
+                        let county_shape_geo = new THREE.BufferGeometry().setFromPoints(points);
+                        let county_object = new THREE.Line(county_shape_geo, shape_material);
+                        county_shape_objects.push(county_object);
+                        scene.add(county_object);
+            */
+
             // iterate over each couty geometry
+            let first = true;
+            var color_hex = 0xffffff;
             us.objects.counties.geometries.forEach((d, i) => {
 
+                var borders = topojson.mesh(us, us.objects.counties.geometries[i])
+                //console.log("borders", borders.coordinates[0])
+                 
+                 color_hex -=0x010101;
 
+                if (true/*(d["type"] == "MultiPolygon") && first*/) {
+                    //console.log("X");
+                    console.log(d["id"] + "  " + i);
+                    //console.log("borders", borders.coordinates);
 
-                if (i > -1) {
+                    first = false;
+
+                    let points = [];
+                    let countyShape = new THREE.Shape();
+                    borders.coordinates[0].forEach((coord, i) => {
+                        //console.log(coord);
+                        if (i == 0)
+                            countyShape.moveTo((coord[0] / -50) + 10, (coord[1] / -50) + 10);
+                        else
+                            countyShape.lineTo((coord[0] / -50) + 10, (coord[1] / -50) + 10);
+
+                        points.push(new THREE.Vector3((coord[0] / -50) + 10, (coord[1] / -50) + 10, 0));
+                    });
+
+                    let county_geometry = new THREE.ShapeGeometry( countyShape );
+
+                    //let county_shape_geo = new THREE.BufferGeometry().setFromPoints(points);
+                    var shape_material = new THREE.LineBasicMaterial({ color: color_hex });
+                    let county_object = new THREE.Mesh(county_geometry, shape_material);
+                    county_shape_objects.push(county_object);
+                    scene.add(county_object);
+                }
+                if (i < -1) {
                     // for now: generate only 'polygons' geometry type
                     if (d["type"] == "Polygon") {
 
